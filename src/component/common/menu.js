@@ -8,6 +8,7 @@ function MenuIndex() {
             { key: `bookmark`, name: `Bookmark Manager`, link: `/bookmark` },
             { key: `bookmark_tag`, name: `Bookmark Tag Manager`, link: `/bookmark/tag` },
             { key: `exchange_rage`, name: `Exchange Rate`, link: `/exchangeRate` },
+            { key: `request`, name: `Request`, link: `/request` },
             { key: `md5`, name: `MD5`, link: `/md5` },
             { key: `base64`, name: `Base64`, link: `/base64` },
             { key: `aes`, name: `Aes`, link: `/aes` },
