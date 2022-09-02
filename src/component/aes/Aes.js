@@ -43,7 +43,7 @@ function Aes() {
             return
         }
 
-        if (key.length !== 16 && key.length !== 16 && key.length !== 16) {
+        if (key.length !== 16 && key.length !== 16 && key.length !== 32) {
             msgArray.push({ msg: `key length must be 16/24/32`, bg: `danger` })
             setSubmitTips(msgArray)
             return
@@ -92,7 +92,7 @@ function Aes() {
             })
         }
     }
-    
+
     useEffect(() => {
         setPaddings(modeData[mode].paddings)
         setPadding(modeData[mode].defaultValue)
