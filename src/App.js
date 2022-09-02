@@ -13,6 +13,7 @@ import Base64 from './component/base64/base64';
 // import Richtext from './component/richtext/Richtext';
 import MenuIndex from './component/common/menu';
 import Aes from './component/aes/Aes';
+import RandomString from './component/random/RandomString'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/bookmark/tag" element={<BookmarkTag />} />
         <Route path="/exchangeRate" element={<ExchangeRate />} />
         <Route path="/request" element={ <Request /> } />
+        <Route path="/randomString" element={<RandomString />} />
         <Route path="/md5" element={<MD5 />} />
         <Route path="/base64" element={<Base64 />} />
         <Route path="/aes" element={<Aes />} />
