@@ -24,3 +24,7 @@ export function verifyInt(val = ``, min = -999999999, max = 999999999, defVal = 
     val1 = parseInt(Number(val1))
     return val1 < min ? parseInt(Number(min)) : val1
 }
+
+export function isInt(val) {
+    return parseInt(val, 10) === Number(val)
+}

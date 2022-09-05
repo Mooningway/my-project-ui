@@ -39,7 +39,7 @@ function Aes() {
 
     const aseOperationt = (event) => {
         let msgArray = [...submitTips]
-        if (!key && key.length === 0) {
+        if (!key || key.length === 0) {
             msgArray.push({ msg: `key is a required field`, bg: `danger` })
             setSubmitTips(msgArray)
             return
