@@ -8,9 +8,10 @@ import Toast from 'react-bootstrap/Toast';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 
-const modes = [`GCM`]
+const modes = [`GCM`, `CBC`]
 const modeData = {
-    "GCM": { paddings: [`nopadding`], defaultValue: `nopadding` }
+    "GCM": { paddings: [`NoPadding`], defaultValue: `NoPadding`, nonceDisabled: false },
+    "CBC": { paddings: [`Pkcs7Padding`], defaultValue: `Pkcs7Padding`, nonceDisabled: true }
 }
 const outputEncodings = [`Hex`, `Base64`]
 
@@ -26,9 +27,10 @@ function Aes() {
     const [cipherText, setCipherText] = useState(``)
 
     // Decrypt text
-
     const [originalText1, setOriginalText1] = useState(``)
     const [cipherText1, setCipherText1] = useState(``)
+
+    const [nonceDisabled, setNonceDisabled] = useState(false)
 
     const [paddings, setPaddings] = useState([])
     const [submitTips, setSubmitTips] = useState([])
@@ -49,7 +51,7 @@ function Aes() {
             return
         }
 
-        if (!nonce && nonce.length === 0) {
+        if (mode === `GCM` && !nonce && nonce.length === 0) {
             msgArray.push({ msg: `nonce is a required field`, bg: `danger` })
             setSubmitTips(msgArray)
             return
@@ -63,7 +65,7 @@ function Aes() {
             }
 
             let data = { key: key, text: originalText, mode: mode, nonce: nonce, padding: padding, outputEncoding: outputEncoding }
-            aesEncrypt(data, response => {
+            aesEncrypt(data, mode, response => {
                 if (response.code === `200`) {
                     setCipherText(response.data)
                     msgArray.push({ msg: response.msg, bg: `success` })
@@ -81,7 +83,7 @@ function Aes() {
             }
 
             let data = { key: key, text: cipherText1, mode: mode, nonce: nonce, padding: padding, outputEncoding: outputEncoding }
-            aesDecrypt(data, response => {
+            aesDecrypt(data, mode, response => {
                 if (response.code === `200`) {
                     setOriginalText1(response.data)
                     msgArray.push({ msg: response.msg, bg: `success` })
@@ -96,6 +98,7 @@ function Aes() {
     useEffect(() => {
         setPaddings(modeData[mode].paddings)
         setPadding(modeData[mode].defaultValue)
+        setNonceDisabled(modeData[mode].nonceDisabled)
     }, [mode])
 
     useEffect(() => {
@@ -159,7 +162,7 @@ function Aes() {
             </Row>
             <Row className="mt-2">
                 <Col xs={12}>
-                    <Form.Control as="textarea" rows={2} value={nonce} onChange={(e) => setNonce(e.target.value)}></Form.Control>
+                    <Form.Control as="textarea" rows={2} value={nonce} onChange={(e) => setNonce(e.target.value)} disabled={nonceDisabled}></Form.Control>
                 </Col>
             </Row>
 
@@ -186,7 +189,7 @@ function Aes() {
                 </Tab>
 
                 <Tab eventKey="decrypt" title="Decrypt">
-                <Row className="mt-3">
+                    <Row className="mt-3">
                         <Col xs={6}><b>OriginalText</b></Col>
                         <Col xs={6}><b>Ciphertext</b></Col>
                     </Row>
