@@ -58,7 +58,7 @@ function Aes() {
         }
 
         if (event === `encrypt`) {
-            if (!originalText && originalText.length === 0) {
+            if (!originalText || originalText.length === 0) {
                 msgArray.push({ msg: `originalText is a required field`, bg: `danger` })
                 setSubmitTips(msgArray)
                 return

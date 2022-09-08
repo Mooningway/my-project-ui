@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import { rsaGenerateKey, rsaEncrypt, rsaDecrypt } from "../../api/rsa/ApiRsa";
-import { isInt } from "../../js/common/Verify";
 import Row from "react-bootstrap/Row"
 import Col from "react-bootstrap/Col"
 import Form from "react-bootstrap/Form";
@@ -9,19 +8,27 @@ import Toast from 'react-bootstrap/Toast';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 
-const modes = [`X509`]
-const modeData = {
-    "X509": { paddings: [`Pkcs1Padding`, `Pkcs8Padding`], defaultValue: `Pkcs8Padding` },
-}
-const outputEncodings = [`Hex`, `Base64`]
+const modes = { data: [`OAEP`, `PKCS1v15`], defaultValue: `OAEP` }
+const keySizes = { data: [`512`, `1024`, `2048`, `4096`, `8192`], defaultValue: `2048` }
+const keyFormats = { data: [`PKCS1`, `PKCS8`], defaultValue: `PKCS1` }
+const textOutputs = { data: [`Hex`, `Base64`], defaultValue: `Hex` }
+const hashes = { data: [`SHA1`, `SHA256`, `SHA512`, `MD5`], defaultValue: `SHA256` }
 
 function Rsa() {
-    const [bits, setBits] = useState(2048)
+    // Rsa OAEP and Rsa PKCS1v15
+    const [mode, setMode] = useState(modes.defaultValue)
+
+    // Key
+    const [bits, setBits] = useState(keySizes.defaultValue)
+    const [keyFormat, setKeyFormat] = useState(keyFormats.defaultValue)
     const [privateKey, setPrivateKey] = useState(``)
     const [publicKey, setPublicKey] = useState(``)
-    const [mode, setMode] = useState(`X509`)
-    const [padding, setPadding] = useState(``)
-    const [outputEncoding, setOutputEncoding] = useState(`Hex`)
+
+    const [textOutput, setTextOutput] = useState(textOutputs.defaultValue)
+
+    const [hash, setHash] = useState(hashes.defaultValue)
+    const [label, setLabel] = useState(``)
+    const [oaepFlag, setOaepFlag] = useState(true)
 
     // Encrypt text
     const [publicKey1, setPublicKey1] = useState(``)
@@ -33,17 +40,8 @@ function Rsa() {
     const [originalText2, setOriginalText2] = useState(``)
     const [cipherText2, setCipherText2] = useState(``)
 
-    const [paddings, setPaddings] = useState([])
     const [submitTips, setSubmitTips] = useState([])
-
     const [tabsActive, setTabsActive] = useState(`generateKey`)
-
-    const rsaOperationt = (event) => {
-        if (event === `encrypt`) {
-
-        } else if (event === `decrypt`) {
-        }
-    }
 
     const encryptClick = () => {
         let msgArray = [...submitTips]
@@ -57,7 +55,14 @@ function Rsa() {
             setSubmitTips(msgArray)
             return
         }
-        let data = {text: originalText1, publickey: publicKey1, outputEncoding: outputEncoding}
+        let data = {}
+        if (mode === modes.defaultValue) {
+            // OAEP
+            data = { text: originalText1, publickey: publicKey1, textOutput: textOutput, mode: mode, hash: hash, label: label }
+        } else {
+            // PKCS1v15
+            data = { text: originalText1, publickey: publicKey1, textOutput: textOutput, mode: mode }
+        }
         rsaEncrypt(data, (response) => {
             if (response.code === `200`) {
                 msgArray.push({ msg: response.msg, bg: `success` })
@@ -81,7 +86,14 @@ function Rsa() {
             setSubmitTips(msgArray)
             return
         }
-        let data = {text: cipherText2, privateKey: privateKey2, pkcs: padding, outputEncoding: outputEncoding}
+        let data = {}
+        if (mode === modes.defaultValue) {
+            // OAEP
+            data = { text: cipherText2, privateKey: privateKey2, textOutput: textOutput, mode: mode, pkcs: keyFormat, hash: hash, label: label }
+        } else {
+            // PKCS1v15
+            data = { text: cipherText2, privateKey: privateKey2, textOutput: textOutput, mode: mode, pkcs: keyFormat }
+        }
         rsaDecrypt(data, (response) => {
             if (response.code === `200`) {
                 msgArray.push({ msg: response.msg, bg: `success` })
@@ -95,20 +107,7 @@ function Rsa() {
 
     const rsaGenerateKeyClick = () => {
         let msgArray = [...submitTips]
-
-        if (isInt(Number(bits)) === true) {
-            if (Number(bits) < 12 || Number(bits) > 8192) {
-                msgArray.push({ msg: `Rsa key size must be in the range 12-8192`, bg: `danger` })
-                setSubmitTips(msgArray)
-                return;
-            }
-        } else {
-            msgArray.push({ msg: `Rsa key size must be in the range 12-8192`, bg: `danger` })
-            setSubmitTips(msgArray)
-            return;
-        }
-
-        let data = { bits: bits, pkcs: padding }
+        let data = { bits: Number(bits), keyFormat: keyFormat }
         rsaGenerateKey(data, (response) => {
             if (response.code === `200`) {
                 msgArray.push({ msg: response.msg, bg: `success` })
@@ -122,8 +121,13 @@ function Rsa() {
     }
 
     useEffect(() => {
-        setPaddings(modeData[mode].paddings)
-        setPadding(modeData[mode].defaultValue)
+        if (mode === modes.defaultValue) {
+            // OAEP
+            setOaepFlag(true)
+        } else {
+            // PKCS1v15
+            setOaepFlag(false)
+        }
     }, [mode])
 
     useEffect(() => {
@@ -150,44 +154,61 @@ function Rsa() {
             </h4>
 
             <Row className="mt-3">
-                <Col xs={2}><b>Mode</b></Col>
-                <Col xs={3}><b>Padding</b></Col>
-                <Col xs={3}><b>Output</b></Col>
+                <Col xs={3}><b>Mode</b></Col>
+                <Col xs={3}><b>Key size</b></Col>
+                <Col xs={3}><b>Key format</b></Col>
+                <Col xs={3}><b>Text output</b></Col>
             </Row>
             <Row className="mt-2">
-                <Col xs={2}>
+                <Col xs={3}>
                     <Form.Select value={mode} onChange={(e) => setMode(e.target.value)} autoComplete="off">
-                        {modes.map((e, i) => {
+                        {modes.data.map((e) => {
                             return <option key={"mode-" + e} value={e}>{e}</option>
                         })}
                     </Form.Select>
                 </Col>
                 <Col xs={3}>
-                    <Form.Select value={padding} onChange={(e) => setPadding(e.target.value)} autoComplete="off">
-                        {paddings.map((e, i) => {
-                            return <option key={"padding-" + e} value={e}>{e}</option>
+                    <Form.Select value={bits} onChange={(e) => setBits(e.target.value)}>
+                        {keySizes.data.map((e) => {
+                            return <option key={"keySizes-" + e} value={e}>{e}</option>
                         })}
                     </Form.Select>
                 </Col>
                 <Col xs={3}>
-                    <Form.Select value={outputEncoding} onChange={(e) => setOutputEncoding(e.target.value)} autoComplete="off">
-                        {outputEncodings.map((e, i) => {
-                            return <option key={"outputEncoding-" + e} value={e}>{e}</option>
+                    <Form.Select value={keyFormat} onChange={(e) => setKeyFormat(e.target.value)} autoComplete="off">
+                        {keyFormats.data.map((e) => {
+                            return <option key={"keyFormats-" + e} value={e}>{e}</option>
+                        })}
+                    </Form.Select>
+                </Col>
+                <Col xs={3}>
+                    <Form.Select value={textOutput} onChange={(e) => setTextOutput(e.target.value)} autoComplete="off">
+                        {textOutputs.data.map((e, i) => {
+                            return <option key={"textOutputs-" + e} value={e}>{e}</option>
                         })}
                     </Form.Select>
                 </Col>
             </Row>
 
+            <Row className="mt-3">
+                <Col xs={3}><b>Hash</b></Col>
+                <Col xs={9}><b>Label</b></Col>
+            </Row>
+            <Row className="mt-2">
+                <Col xs={3}>
+                    <Form.Select value={hash} onChange={(e) => setHash(e.target.value)} disabled={!oaepFlag}>
+                        {hashes.data.map((e) => {
+                            return <option key={"hashes-" + e} value={e}>{e}</option>
+                        })}
+                    </Form.Select>
+                </Col>
+                <Col xs={9}>
+                    <Form.Control value={label} as="textarea" rows={3} onChange={(e) => setLabel(e.target.value)} disabled={!oaepFlag}></Form.Control>
+                </Col>
+            </Row>
+
             <Tabs className="mt-4" activeKey={tabsActive} onSelect={(k) => setTabsActive(k)}>
                 <Tab eventKey="generateKey" title="Generate Key">
-                    <Row className="mt-3">
-                        <Col xs={2}><b>Rsa key size</b></Col>
-                    </Row>
-                    <Row className="mt-2">
-                        <Col xs={2}>
-                            <Form.Control value={bits} onChange={(e) => setBits(e.target.value)}></Form.Control>
-                        </Col>
-                    </Row>
                     <Row className="mt-3">
                         <Col xs={6}><b>Private Key</b></Col>
                         <Col xs={6}><b>Public Key</b></Col>
@@ -213,7 +234,7 @@ function Rsa() {
                     </Row>
                     <Row className="mt-2">
                         <Col xs={12}>
-                            <Form.Control value={publicKey1} as="textarea" rows={6} onChange={(e) => setPublicKey1(e.target.value)}></Form.Control>
+                            <Form.Control value={publicKey1} as="textarea" rows={3} onChange={(e) => setPublicKey1(e.target.value)}></Form.Control>
                         </Col>
                     </Row>
                     <Row className="mt-3">
@@ -222,10 +243,10 @@ function Rsa() {
                     </Row>
                     <Row className="mt-2">
                         <Col xs={6}>
-                            <Form.Control value={originalText1} as="textarea" rows={12} onChange={(e) => setOriginalText1(e.target.value)}></Form.Control>
+                            <Form.Control value={originalText1} as="textarea" rows={8} onChange={(e) => setOriginalText1(e.target.value)}></Form.Control>
                         </Col>
                         <Col xs={6}>
-                            <Form.Control value={cipherText1} as="textarea" rows={12} onChange={(e) => setCipherText1(e.target.value)}></Form.Control>
+                            <Form.Control value={cipherText1} as="textarea" rows={8} onChange={(e) => setCipherText1(e.target.value)}></Form.Control>
                         </Col>
                     </Row>
                     <Row className="mt-4">
@@ -241,19 +262,19 @@ function Rsa() {
                     </Row>
                     <Row className="mt-2">
                         <Col xs={12}>
-                            <Form.Control value={privateKey2} as="textarea" rows={6} onChange={(e) => setPrivateKey2(e.target.value)}></Form.Control>
+                            <Form.Control value={privateKey2} as="textarea" rows={3} onChange={(e) => setPrivateKey2(e.target.value)}></Form.Control>
                         </Col>
                     </Row>
                     <Row className="mt-3">
-                        <Col xs={6}><b>OriginalText</b></Col>
                         <Col xs={6}><b>CipherText</b></Col>
+                        <Col xs={6}><b>OriginalText</b></Col>
                     </Row>
                     <Row className="mt-2">
                         <Col xs={6}>
-                            <Form.Control value={originalText2} as="textarea" rows={12} onChange={(e) => setOriginalText2(e.target.value)}></Form.Control>
+                            <Form.Control value={cipherText2} as="textarea" rows={8} onChange={(e) => setCipherText2(e.target.value)}></Form.Control>
                         </Col>
                         <Col xs={6}>
-                            <Form.Control value={cipherText2} as="textarea" rows={12} onChange={(e) => setCipherText2(e.target.value)}></Form.Control>
+                            <Form.Control value={originalText2} as="textarea" rows={8} onChange={(e) => setOriginalText2(e.target.value)}></Form.Control>
                         </Col>
                     </Row>
                     <Row className="mt-4">
